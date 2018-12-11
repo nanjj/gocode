@@ -21,28 +21,8 @@ var (
 )
 
 func Go111ModuleOn() (on bool) {
-	version := OutputCommand("go", "version")
-	if !strings.Contains(version, "go1.11") {
-		return
-	}
-	if mod := os.Getenv("GO111MODULE"); mod == "on" {
-		on = true
-		return
-	} else if mod == "off" {
-		return
-	}
-	goPath := os.Getenv("GOPATH")
-	pathes := strings.Split(goPath, ":")
-	wd, err := os.Getwd()
-	if err != nil {
-		return
-	}
-	for _, p := range pathes {
-		if strings.HasPrefix(wd, p) {
-			return
-		}
-	}
-	on = true
+	output := strings.TrimSpace(OutputCommand("go", "env", "GOMOD"))
+	on = strings.HasSuffix(output, "go.mod")
 	return
 }
 
