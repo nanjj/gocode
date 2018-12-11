@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 )
@@ -54,10 +55,40 @@ func RunCommand(command string, args ...string) {
 }
 
 func StartProc(command string, args ...string) {
+	if needDebug {
+		logname := fmt.Sprintf("/tmp/%s.log", path.Base(command))
+		args = append([]string{command}, args...)
+		args = append(args, "&>", logname)
+		command = "/bin/bash"
+		args = []string{"-c", strings.Join(args, " ")}
+	}
 	args = append([]string{command}, args...)
-	cmd := exec.Command("nohup", args...)
-	cmd.Start()
-	cmd.Process.Release()
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	var stdin, stdout, stderr *os.File
+	stdin, err = os.Open(os.DevNull)
+	if err != nil {
+		panic(err)
+	}
+	stdout, err = os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	if err != nil {
+		panic(err)
+	}
+	stderr = stdout
+	attrs := os.ProcAttr{
+		Dir:   cwd,
+		Env:   os.Environ(),
+		Files: []*os.File{stdin, stdout, stderr},
+	}
+	p, err := os.StartProcess(command, args, &attrs)
+	if err != nil {
+		panic(err)
+	}
+	if err = p.Release(); err != nil {
+		panic(err)
+	}
 }
 
 func FileExists(p string) bool {
@@ -94,7 +125,11 @@ func main() {
 			OutputCommand(fmt.Sprintf("%s.%s", self, name), "exit")
 		} else {
 			if !ProcStarted(fmt.Sprintf("gocode.%s", name)) {
-				StartProc(output, "-s", "-sock", "unix", "-cache")
+				sArgs := []string{"-s", "-sock", "unix", "-cache"}
+				if needDebug {
+					sArgs = append(sArgs, "-debug")
+				}
+				StartProc(output, sArgs...)
 			}
 		}
 	}
