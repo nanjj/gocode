@@ -114,7 +114,7 @@ func main() {
 			OutputCommand(fmt.Sprintf("%s.%s", self, name), "exit")
 		} else {
 			if !ProcStarted(fmt.Sprintf("gocode.%s", name)) {
-				StartProc(output, "-s", "-sock", "unix")
+				StartProc(output, "-s", "-sock", "unix", "-cache")
 			}
 		}
 	}
